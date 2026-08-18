@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-tier
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api-tier
+  template:
+    metadata:
+      labels:
+        app: api-tier
+    spec:
+      initContainers:
+      - name: api-tier
+        image: node:20-bullseye-slim
+        workingDir: /app
+        command: ["sh", "-c", "cp /config/* /app/ && npm install --omit=dev"]
+        volumeMounts:
+          - name: api-code
+            mountPath: /config
+      
+      containers:
+      - name: api-tier
+        image: node:20-bullseye-slim
+        workingDir: /app
+        command: ["sh", "-c", "node server.js"]
+        env:
+          - name: DB_HOST
+            value: db-tier
+          - name: DB_PORT
+            value: "5432"
+          - name: DB_NAME
+            valueFrom:
+              secretKeyRef:
+                name: db-secret
+                key: POSTGRES_DB
+          - name: DB_USER
+            valueFrom:
+              secretKeyRef:
+                name: db-secret
+                key: POSTGRES_USER
+          - name: DB_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: db-secret
+                key: POSTGRES_PASSWORD
+
+        ports:
+          - containerPort: 3000
+        volumeMounts:
+          - name: api-code
+            mountPath: /config
+          - name: app-runtime-volume
+            mountPath: /app
+
+    volumes:
+      - name: api-code
+        configMap:
+          name: node-app-files
+      - name: app-runtime-volume
+        emptyDir: {}
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-tier
+spec:
+  selector:
+    app: api-tier
+  ports:
+    - protocol: TCP
+      port: 3000
+      targetPort: 3000

@@ -1,0 +1,40 @@
+apiVersion: v1
+kind: Deployment
+metadata:
+  name: web-tier
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web-tier
+  template:
+    metadata:
+      labels:
+        app: web-tier
+    spec:
+      initcontainer:
+      - name: web-tier
+        image: nginx:1.25.2-alpine
+        command: ["sh", "-c", "cp /tmp/default.conf /etc/nginx/conf.d/default.conf"]
+        volumeMounts:
+          - name: web-content
+            mountPath: /tmp
+          - name: nginx-configuration
+            mountPath: /etc/nginx/conf.d/default.conf
+      containers:
+      - name: web-tier
+        image: nginx:1.25.2-alpine
+        command: ["sh", "-c", "cp /tmp/index.html /usr/share/nginx/html/index.html"]
+        ports:
+          - containerPort: 80
+        volumeMounts:
+          - name: web-content
+            mountPath: /tmp
+          - name: nginx-configuration
+            mountPath: /etc/nginx/conf.d/default.conf
+      volumes:
+        - name: web-content
+          configMap:
+            name: web-files
+        - nginx-configuration:
+            emptyDir: {} 

@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Multi-VM Task App</title>
+  <style>
+    :root { color-scheme: light; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      max-width: 640px;
+      margin: 40px auto;
+      padding: 0 20px;
+      color: #1a1a1a;
+    }
+    h1 { margin-bottom: 4px; }
+    .subtitle { color: #666; font-size: 14px; margin-bottom: 24px; }
+    .arch { font-family: monospace; background: #f4f4f4; padding: 8px 12px; border-radius: 6px; font-size: 13px; }
+    .controls { display: flex; gap: 8px; margin: 20px 0; }
+    input {
+      flex: 1;
+      padding: 10px 12px;
+      font-size: 15px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+    button {
+      padding: 10px 16px;
+      font-size: 15px;
+      border: none;
+      border-radius: 6px;
+      background: #2563eb;
+      color: white;
+      cursor: pointer;
+    }
+    button:hover { background: #1d4ed8; }
+    .task {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 14px;
+      border: 1px solid #e5e5e5;
+      border-radius: 6px;
+      margin-bottom: 8px;
+      background: #fafafa;
+    }
+    .task .delete {
+      background: transparent;
+      color: #b91c1c;
+      padding: 4px 10px;
+      font-size: 13px;
+    }
+    .task .delete:hover { background: #fee2e2; }
+    .empty { color: #888; text-align: center; padding: 20px; }
+    #status { font-size: 13px; color: #666; margin-top: 16px; }
+  </style>
+</head>
+<body>
+  <h1>Tasks</h1>
+  <p class="subtitle">A 3-VM demo: <span class="arch">browser → web (nginx) → api (node) → db (postgres)</span></p>
+
+  <div class="controls">
+    <input id="newTask" placeholder="Enter a task and press Enter…" autofocus />
+    <button id="addBtn">Add</button>
+  </div>
+
+  <div id="tasks"></div>
+  <div id="status"></div>
+
+  <script>
+    const tasksEl  = document.getElementById('tasks');
+    const inputEl  = document.getElementById('newTask');
+    const addBtn   = document.getElementById('addBtn');
+    const statusEl = document.getElementById('status');
+
+    // All API calls go to /api/* on the same host -- nginx on the web VM
+    // reverse-proxies them to the api VM.
+    async function loadTasks() {
+      try {
+        const res = await fetch('/api/tasks');
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const tasks = await res.json();
+        if (tasks.length === 0) {
+          tasksEl.innerHTML = '<div class="empty">No tasks yet. Add one above.</div>';
+        } else {
+          tasksEl.innerHTML = tasks.map(t => `
+            <div class="task">
+              <span>${escapeHtml(t.title)}</span>
+              <button class="delete" data-id="${t.id}">Delete</button>
+            </div>
+          `).join('');
+        }
+        statusEl.textContent = `Loaded ${tasks.length} task(s) from the API.`;
+      } catch (err) {
+        statusEl.textContent = 'Error talking to API: ' + err.message;
+      }
+    }
+
+    async function addTask() {
+      const title = inputEl.value.trim();
+      if (!title) return;
+      const res = await fetch('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title }),
+      });
+      if (res.ok) {
+        inputEl.value = '';
+        loadTasks();
+      } else {
+        statusEl.textContent = 'Failed to add task.';
+      }
+    }
+
+    async function deleteTask(id) {
+      const res = await fetch('/api/tasks/' + id, { method: 'DELETE' });
+      if (res.ok) loadTasks();
+    }
+
+    function escapeHtml(s) {
+      return s.replace(/[&<>"']/g, c => ({
+        '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+      }[c]));
+    }
+
+    addBtn.addEventListener('click', addTask);
+    inputEl.addEventListener('keydown', e => { if (e.key === 'Enter') addTask(); });
+    tasksEl.addEventListener('click', e => {
+      if (e.target.classList.contains('delete')) {
+        deleteTask(e.target.dataset.id);
+      }
+    });
+
+    loadTasks();
+  </script>
+</body>
+</html>

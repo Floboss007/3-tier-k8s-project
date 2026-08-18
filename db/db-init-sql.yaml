@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: init.sql
+data:
+  init.sql: |
+      -- Create the dedicated app user and database
+      CREATE USER appuser WITH PASSWORD 'apppass123';
+      GRANT ALL PRIVILEGES ON DATABASE appdb TO appuser;
+
+      -- Connect to the appdb database to create schema
+      \c appdb
+
+      -- Create the table structure
+      CREATE TABLE tasks (
+          id         SERIAL PRIMARY KEY,
+          title      VARCHAR(200) NOT NULL,
+          completed  BOOLEAN DEFAULT FALSE,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      -- Assign permissions to the new app user
+      GRANT ALL PRIVILEGES ON TABLE tasks TO appuser;
+      GRANT USAGE, SELECT ON SEQUENCE tasks_id_seq TO appuser;
+
+      -- Seed initial data
+      INSERT INTO tasks (title) VALUES
+          ('Learn Vagrant'),
+          ('Set up multi-VM project'),
+          ('Master DevOps');
