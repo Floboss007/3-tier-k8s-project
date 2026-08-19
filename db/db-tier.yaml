@@ -23,14 +23,13 @@ spec:
     metadata:
       labels:
         app: db-tier
-  spec:
+    spec:
       containers:
       - name: db-tier
         image: postgres:13
-        envfiles:
-          - name: db-env
-            secretRef:
-              secretName: db-secret
+        envFrom:
+        -  secretRef:
+             name: db-secret
          
         ports:
           - containerPort: 5432

@@ -11,7 +11,7 @@ data:
 
         # Serve the static frontend
         location / {
-            try_files \$uri \$uri/ =404;
+            try_files $uri $uri/ =404;
         }
 
         # Reverse-proxy /api/ requests to the backend API container

@@ -13,13 +13,15 @@ spec:
         app: api-tier
     spec:
       initContainers:
-      - name: api-tier
+      - name: api-tier-helper
         image: node:20-bullseye-slim
         workingDir: /app
         command: ["sh", "-c", "cp /config/* /app/ && npm install --omit=dev"]
         volumeMounts:
           - name: api-code
             mountPath: /config
+          - name: app-runtime-volume
+            mountPath: /app
       
       containers:
       - name: api-tier
@@ -55,7 +57,7 @@ spec:
           - name: app-runtime-volume
             mountPath: /app
 
-    volumes:
+      volumes:
       - name: api-code
         configMap:
           name: node-app-files

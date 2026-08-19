@@ -1,4 +1,4 @@
-apiVersion: v1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: web-tier
@@ -12,19 +12,25 @@ spec:
       labels:
         app: web-tier
     spec:
-      initcontainer:
-      - name: web-tier
+      initContainers:
+      - name: web-tier-helper
         image: nginx:1.25.2-alpine
-        command: ["sh", "-c", "cp /tmp/default.conf /etc/nginx/conf.d/default.conf"]
+        command: ["sh", "-c" ]
+        args: 
+        -  |
+           cp /tmp/default.conf /mnt/config/default.conf
+           cp /tmp/index.html /mnt/html/index.html
         volumeMounts:
           - name: web-content
             mountPath: /tmp
           - name: nginx-configuration
-            mountPath: /etc/nginx/conf.d/default.conf
+            mountPath: /mnt/config
+          - name: web-files
+            mountPath: /mnt/html/
       containers:
       - name: web-tier
         image: nginx:1.25.2-alpine
-        command: ["sh", "-c", "cp /tmp/index.html /usr/share/nginx/html/index.html"]
+        command: ["nginx", "-g", "daemon off;"]
         ports:
           - containerPort: 80
         volumeMounts:
@@ -32,9 +38,27 @@ spec:
             mountPath: /tmp
           - name: nginx-configuration
             mountPath: /etc/nginx/conf.d/default.conf
+            subPath: default.conf
+          - name: web-files
+            mountPath: /usr/share/nginx/html/index.html
+            subPath: index.html
       volumes:
         - name: web-content
           configMap:
             name: web-files
-        - nginx-configuration:
-            emptyDir: {} 
+        - name: nginx-configuration
+          emptyDir: {} 
+        - name: web-files
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-tier 
+spec:
+  selector:
+    app: web-tier
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
