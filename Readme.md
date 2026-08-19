@@ -32,3 +32,11 @@ note: if using this code to create the manifest, ensure the source codes or conf
 The source codes are then copied from  their mount point to the working dir /app (an emptydir) through initcontainer. where npm will be installed and node_modules will be downloaded in . The main container will then run ``node server.js``
 
 The web tier: loads the frontend source code and the default.conf though configmap and is then copied to their respective location in the pod container. the default.conf file reverse proxies to the "api-tier" service.
+
+To deploy, apply all the .yaml files in /db /api and /web in that order. apply using :
+``kubectl apply -f <pathto-.yamlfile>``
+
+to test the project, use port-forward to access the deployment on local browser using:
+``kubectl port-forward svc/web-tier 8080:80``
+
+the next phase will implement the gateway-api
