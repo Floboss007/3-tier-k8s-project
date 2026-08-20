@@ -39,4 +39,4 @@ To deploy, apply all the .yaml files in /db /api and /web in that order. apply u
 to test the project, use port-forward to access the deployment on local browser using:
 ``kubectl port-forward svc/web-tier 8080:80``
 
-the next phase will implement the gateway-api
+Ingress and Gateway-api are substitute for the port-forward way of managing external traffic but are complex and redundant to implement on a KinD cluster. 
